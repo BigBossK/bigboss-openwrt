@@ -44,9 +44,9 @@ jobs:
       id: codes
       working-directory: /workdir
       env: 
-        REPO_URL="https://github.com/coolsnowwolf/lede"
-        REPO_BRANCH="master"
-        TAGS_NAME="lede"
+        REPO_URL: https://github.com/coolsnowwolf/lede
+        REPO_BRANCH: master
+        TAGS_NAME: lede
       run: |
         # Clone source code
         git clone -q --single-branch --depth=1 --branch=${REPO_BRANCH} ${REPO_URL} openwrt
