@@ -1,16 +1,21 @@
-name: Build_x86_612
+name: AX6
 
-on: 
+on:
   repository_dispatch:
   workflow_dispatch:
-
-# 点赞☆Star触发编译
-#  watch:
-#    types: [started]
+      
+env:
+  CONFIG_FILE: configs/ARM/ipq/ax6_66.config
+  DIY_P1_SH: diy/lean/lean1.sh
+  DIY_P2_SH: diy/lean/lean2.sh
+  UPLOAD_BIN_DIR: true
+  UPLOAD_FIRMWARE: true
+  UPLOAD_RELEASE: true
+  TZ: Asia/Shanghai
 
 jobs:
-  Build_x86_612:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout
       uses: actions/checkout@main
