@@ -42,4 +42,91 @@ jobs:
         cd openwrt
         cp -f ../diy/lean/lean1.sh ./
         chmod +x ./lean1.sh && ./lean1.sh
-	
+
+    - name: Update & Install feeds
+      working-directory: ./openwrt
+      run: |
+        ./scripts/feeds update -a
+
+        ./scripts/feeds install -a
+
+        cp -f ../diy/lean/lean2.sh ./        
+        chmod +x ./lean2.sh && ./lean2.sh
+                
+        sed -i "s/KERNEL_PATCHVER:=*.*/KERNEL_PATCHVER:=6.12/g" target/linux/x86/Makefile
+        sed -i "s/KERNEL_TESTING_PATCHVER:=*.*/KERNEL_TESTING_PATCHVER:=6.12/g" target/linux/x86/Makefile      
+
+        sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='AE86Wrt-X86-Lite-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
+        
+    - name: Configuration Customization - Build_x86_612
+      env:
+        CONFIG_FILE: './configs/X86/x86_612.config'
+      run: |
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        cd openwrt && make defconfig
+        
+    - name: Download package
+      working-directory: ./openwrt
+      run: |
+        make download -j$(nproc)
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
+
+    - name: Build firmware
+      working-directory: ./openwrt
+      run: |
+        make -j$(nproc) V=s
+
+    - name: Assemble Artifact
+      id: assemble_artifact
+      run: |
+        rm -rf ./X86_Out
+        mkdir -p ./X86_Out/
+        cp -a ./openwrt/.config ./X86_Out/x86_612.config
+        
+        getmd5()
+        {
+        md5sum=`md5sum $1`
+        md5=`echo ${md5sum% *}`
+        md5=`echo ${md5:0:10}`
+        }
+        
+        rom=openwrt/bin/targets/x86/64/openwrt-x86-64-generic-squashfs-combined-efi.img.gz
+        getmd5 $rom
+
+        cp -a $rom ./X86_Out/AE86Wrt-X86-Lean-6.12-$(date +%Y%m%d)_${md5}.img.gz
+               
+    - name: Upload Firmwares
+      uses: actions/upload-artifact@main
+      with:
+        name: X86-OpenWrt-6.12
+        path: X86_Out/*.img.gz
+
+    - name: Upload config
+      uses: actions/upload-artifact@main
+      with:
+        name: X86-6.12-config
+        path: X86_Out/x86_612.config
+
+    - name: Upload Packages
+      uses: actions/upload-artifact@main
+      with:
+        name: X86-612-Packages
+        path: openwrt/bin/packages
+        
+    - name: Generate Tag & Release Name
+      id: generate_name
+      run: |
+        time=$(date +%Y%m%d%H%M%S)
+        release_tag="$time"
+        release_name="软路由(X86_64)-Lean-6.12内核-$(date +%Y%m%d)"
+        echo "release_name=$release_name" >> $GITHUB_OUTPUT
+        echo "release_tag=$release_tag" >> $GITHUB_OUTPUT   
+
+    - name: Create Release & Upload
+      uses: ncipollo/release-action@v1.14.0
+      with:
+        artifacts: X86_Out/*.img.gz 
+        name: ${{ steps.generate_name.outputs.release_name }}
+        tag: ${{ steps.generate_name.outputs.release_tag }}
+        token: ${{ secrets.GITHUB_TOKEN }}
