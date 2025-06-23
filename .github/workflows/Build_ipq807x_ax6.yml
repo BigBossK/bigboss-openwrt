@@ -38,7 +38,7 @@ jobs:
         REPO_URL: https://github.com/coolsnowwolf/lede
         REPO_BRANCH: master
       run: |
-        #git clone https://github.com/BigBossK/openwrt ./
+        git clone https://github.com/BigBossK/openwrt ./
         git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
         cd openwrt
         cp -f ../diy/lean/lean1.sh ./
@@ -48,15 +48,14 @@ jobs:
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
-
         ./scripts/feeds install -a
 
         cp -f ../diy/lean/lean2.sh ./        
         chmod +x ./lean2.sh && ./lean2.sh
 
         
-        #sed -i "s/KERNEL_PATCHVER:=*.*/KERNEL_PATCHVER:=6.6/g" target/linux/qualcommax/Makefile
-        #sed -i "s/KERNEL_TESTING_PATCHVER:=*.*/KERNEL_TESTING_PATCHVER:=6.6/g" target/linux/qualcommax/Makefile  
+        sed -i "s/KERNEL_PATCHVER:=*.*/KERNEL_PATCHVER:=6.6/g" target/linux/qualcommax/Makefile
+        sed -i "s/KERNEL_TESTING_PATCHVER:=*.*/KERNEL_TESTING_PATCHVER:=6.6/g" target/linux/qualcommax/Makefile  
 
         sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='AE86Wrt-Redmi-AX6-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
 
