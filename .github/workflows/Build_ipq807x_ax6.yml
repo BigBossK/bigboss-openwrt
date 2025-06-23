@@ -1,21 +1,16 @@
-name: Build_ipq807x_ax6
+name: Build_x86
 
-on:
+on: 
   repository_dispatch:
   workflow_dispatch:
-      
-env:
-  CONFIG_FILE: configs/ARM/ipq/ax6_66.config
-  DIY_P1_SH: diy/lean/lean1.sh
-  DIY_P2_SH: diy/lean/lean2.sh
-  UPLOAD_BIN_DIR: true
-  UPLOAD_FIRMWARE: true
-  UPLOAD_RELEASE: true
-  TZ: Asia/Shanghai
+
+# 点赞☆Star触发编译
+#  watch:
+#    types: [started]
 
 jobs:
-  Build_ipq807x_ax6:
-    runs-on: ubuntu-22.04
+  Build_x86:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@main
