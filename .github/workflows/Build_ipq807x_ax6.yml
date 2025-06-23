@@ -40,4 +40,51 @@ jobs:
         sudo timedatectl set-timezone "${TZ}"
         echo "status=success" >> ${GITHUB_OUTPUT}
 
+    - name: Clone source code [ ${{ inputs.source_branch }} ]
+      id: codes
+      working-directory: /workdir
+      if: ${{ steps.init.outputs.status }} == 'success' && !cancelled()
+      run: |
+        REPO_URL="https://github.com/coolsnowwolf/lede"
+	  REPO_BRANCH="master"
+	  TAGS_NAME="lede"
+
+        # Clone source code
+        git clone -q --single-branch --depth=1 --branch=${REPO_BRANCH} ${REPO_URL} openwrt
+        ln -sf /workdir/openwrt ${GITHUB_WORKSPACE}/openwrt
+
+        # Set output information
+        echo "build_tag=OpenWrt_${TAGS_NAME}_${{ inputs.openwrt_storage }}_$(date +"%Y.%m")" >> ${GITHUB_OUTPUT}
+        echo -e "REPO_URL: [ ${REPO_URL} ]\nREPO_BRANCH: [ ${REPO_BRANCH} ]\nTAGS_NAME: [ ${TAGS_NAME} ]"
+        df -hT ${PWD}
+        echo "status=success" >> ${GITHUB_OUTPUT}
+
+    - name: Load custom feeds
+      run: |
+        chmod +x ${DIY_P1_SH}
+        cd openwrt/
+        ${GITHUB_WORKSPACE}/${DIY_P1_SH}
+
+    - name: Update feeds
+      run: cd openwrt/ && ./scripts/feeds update -a
+
+    - name: Install feeds
+      run: cd openwrt/ && ./scripts/feeds install -a
+
+    - name: Load custom configuration
+      run: |
+        [[ -d "files" ]] && mv -f files openwrt/files
+        [[ -e "${CONFIG_FILE}" ]] && cp -f ${CONFIG_FILE} openwrt/.config
+        chmod +x ${DIY_P2_SH}
+        cd openwrt/
+        ${GITHUB_WORKSPACE}/${DIY_P2_SH}
+
+    - name: Download package
+      id: package
+      run: |
+        cd openwrt/
+        make defconfig
+        make download -j8
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
 
