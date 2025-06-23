@@ -1,4 +1,4 @@
-name: AX6
+name: Build_ipq807x_ax6
 
 on:
   repository_dispatch:
@@ -14,7 +14,7 @@ env:
   TZ: Asia/Shanghai
 
 jobs:
-  build:
+  Build_ipq807x_ax6:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
