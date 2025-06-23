@@ -1,133 +1,165 @@
-name: Build_ipq807x_ax6Add
+name: AX6
 
-on: 
+on:
   repository_dispatch:
   workflow_dispatch:
+      
+env:
+  CONFIG_FILE: configs/ARM/ipq/ax6_66.config
+  DIY_P1_SH: diy/lean/lean1.sh
+  DIY_P2_SH: diy/lean/lean2.sh
+  UPLOAD_BIN_DIR: true
+  UPLOAD_FIRMWARE: true
+  UPLOAD_RELEASE: true
+  TZ: Asia/Shanghai
 
 jobs:
-  Build_ipq807x_ax6:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-22.04
     steps:
-    - name: Checkout
-      uses: actions/checkout@main
+      - name: Checkout
+        uses: actions/checkout@main
 
-    - name: Free disk space
-      uses: sbwml/actions@free-disk
-      with:
-        build-mount-path: /home/runner/work/AE86Wrt/AE86Wrt
+      - name: Initialization environment
+        id: init
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          docker rmi `docker images -q`
+          [[ -n "${AGENT_TOOLSDIRECTORY}" ]] && sudo rm -rf "${AGENT_TOOLSDIRECTORY}"
+          sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d /usr/local/lib/android 2>/dev/null
+          sudo -E apt-get -y update
+          sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
+          sudo -E apt-get -y install $(curl -fsSL https://is.gd/depend_ubuntu2204_openwrt)
+          sudo -E systemctl daemon-reload
+          #sudo -E apt-get -y full-upgrade
+          sudo -E apt-get -y autoremove --purge
+          sudo -E apt-get clean
+          sudo mkdir -p /workdir
+          sudo chown ${USER}:${GROUPS} /workdir
+          sudo timedatectl set-timezone "${TZ}"
+          echo "status=success" >> ${GITHUB_OUTPUT}
 
-    - name: Initialization environment
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        sudo timedatectl set-timezone "Asia/Shanghai"
-        sudo -E apt-get update -y
-        sudo -E apt-get install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pyelftools libpython3-dev qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libfuse-dev python3-setuptools g++ file clang nano genisoimage
-        pip install aligo
-        sudo -E apt-get clean
-        git config --global user.name 'GitHub Actions' && git config --global user.email 'noreply@github.com'
-        df -h
-        
-    - name: Clone source code
-      env: 
-        REPO_URL: https://github.com/coolsnowwolf/lede
-        REPO_BRANCH: master
-      run: |
-        git clone https://github.com/xiangfeidexiaohuo/AE86Wrt ./
-        git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
-        cd openwrt
-        cp -f ../diy/lean/lean1.sh ./
-        chmod +x ./lean1.sh && ./lean1.sh
+      - name: Clone source code [ ${{ inputs.source_branch }} ]
+        id: codes
+        working-directory: /workdir
+        if: ${{ steps.init.outputs.status }} == 'success' && !cancelled()
+        run: |
+          REPO_URL="https://github.com/coolsnowwolf/lede"
+		  REPO_BRANCH="master"
+		  TAGS_NAME="lede"
 
-    - name: Update & Install feeds
-      working-directory: ./openwrt
-      run: |
-        ./scripts/feeds update -a
+          # Clone source code
+          git clone -q --single-branch --depth=1 --branch=${REPO_BRANCH} ${REPO_URL} openwrt
+          ln -sf /workdir/openwrt ${GITHUB_WORKSPACE}/openwrt
 
-        ./scripts/feeds install -a
+          # Set output information
+          echo "build_tag=OpenWrt_${TAGS_NAME}_${{ inputs.openwrt_storage }}_$(date +"%Y.%m")" >> ${GITHUB_OUTPUT}
+          echo -e "REPO_URL: [ ${REPO_URL} ]\nREPO_BRANCH: [ ${REPO_BRANCH} ]\nTAGS_NAME: [ ${TAGS_NAME} ]"
+          df -hT ${PWD}
+          echo "status=success" >> ${GITHUB_OUTPUT}
 
-        cp -f ../diy/lean/lean2.sh ./        
-        chmod +x ./lean2.sh && ./lean2.sh
+      - name: Load custom feeds
+        run: |
+          chmod +x ${DIY_P1_SH}
+          cd openwrt/
+          ${GITHUB_WORKSPACE}/${DIY_P1_SH}
 
-        
-        sed -i "s/KERNEL_PATCHVER:=*.*/KERNEL_PATCHVER:=6.6/g" target/linux/qualcommax/Makefile
-        sed -i "s/KERNEL_TESTING_PATCHVER:=*.*/KERNEL_TESTING_PATCHVER:=6.6/g" target/linux/qualcommax/Makefile  
+      - name: Update feeds
+        run: cd openwrt/ && ./scripts/feeds update -a
 
-        sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='AE86Wrt-Redmi-AX6-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
+      - name: Install feeds
+        run: cd openwrt/ && ./scripts/feeds install -a
 
-              
-    - name: Configuration Customization - Build_ipq807x_ax6
-      env:
-        CONFIG_FILE: './configs/ARM/ipq/ax6_66.config'
-      run: |
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        cd openwrt && make defconfig
-        
-    - name: Download package
-      working-directory: ./openwrt
-      run: |
-        make download -j$(nproc)
-        find dl -size -1024c -exec ls -l {} \;
-        find dl -size -1024c -exec rm -f {} \;
+      - name: Load custom configuration
+        run: |
+          [[ -d "files" ]] && mv -f files openwrt/files
+          [[ -e "${CONFIG_FILE}" ]] && cp -f ${CONFIG_FILE} openwrt/.config
+          chmod +x ${DIY_P2_SH}
+          cd openwrt/
+          ${GITHUB_WORKSPACE}/${DIY_P2_SH}
 
-    - name: Build firmware
-      working-directory: ./openwrt
-      run: |     
-        make -j$(nproc) V=s
-        
-    - name: Assemble Artifact
-      id: assemble_artifact
-      run: |
-        rm -rf ./ARM_Out
-        mkdir -p ./ARM_Out/
-        cp -a ./openwrt/.config ./ARM_Out/ax6_66.config
-        
-        getmd5()
-        {
-        md5sum=`md5sum $1`
-        md5=`echo ${md5sum% *}`
-        md5=`echo ${md5:0:10}`
-        }
-        
-        rom=openwrt/bin/targets/qualcommax/ipq807x/openwrt-qualcommax-ipq807x-redmi_ax6-squashfs-sysupgrade.bin
-        getmd5 $rom        
-        cp -a $rom ./ARM_Out/AE86Wrt-Redmi-AX6-Lean-6.6-$(date +%Y%m%d)_${md5}.bin
-        
-        rom=openwrt/bin/targets/qualcommax/ipq807x/openwrt-qualcommax-ipq807x-redmi_ax6-squashfs-factory.ubi
-        getmd5 $rom           
-        cp -a $rom ./ARM_Out/AE86Wrt-Redmi-AX6-Lean-6.6-$(date +%Y%m%d)_${md5}.ubi
-               
-    - name: Upload Firmwares
-      uses: actions/upload-artifact@main
-      with:
-        name: AX6-OpenWrt
-        path: ARM_Out/AE86* 
+      - name: Download package
+        id: package
+        run: |
+          cd openwrt/
+          make defconfig
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \;
+          find dl -size -1024c -exec rm -f {} \;
 
-    - name: Upload config
-      uses: actions/upload-artifact@main
-      with:
-        name: AX6-config
-        path: ARM_Out/ax6_66.config
+      - name: Compile the OpenWrt
+        id: compile
+        run: |
+          cd openwrt/
+          echo -e "$(nproc) thread compile"
+          make -j$(($(nproc) + 1)) V=s || make -j1 || make -j1 V=s
+          echo "status=success" >> ${GITHUB_OUTPUT}
 
-    - name: Upload Packages
-      uses: actions/upload-artifact@main
-      with:
-        name: AX6-Packages
-        path: openwrt/bin/packages
-                
-    - name: Generate Tag & Release Name
-      id: generate_name
-      run: |
-        time=$(date +%Y%m%d%H%M%S)
-        release_tag="$time"
-        release_name="红米AX6-Lean-6.6内核-$(date +%Y%m%d)"
-        echo "release_name=$release_name" >> $GITHUB_OUTPUT
-        echo "release_tag=$release_tag" >> $GITHUB_OUTPUT     
 
-    - name: Create Release & Upload
-      uses: ncipollo/release-action@v1.14.0
-      with:
-        artifacts: ARM_Out/AE86*
-        name: ${{ steps.generate_name.outputs.release_name }}
-        tag: ${{ steps.generate_name.outputs.release_tag }}
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check space usage
+        if: (!cancelled())
+        run: df -hT
+
+      - name: Upload bin directory
+        uses: actions/upload-artifact@main
+        if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+        with:
+          name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+          path: openwrt/bin
+
+      - name: Organize files
+        id: organize
+        if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+        run: |
+          cd openwrt/bin/targets/*/*
+          rm -rf packages
+          echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+          echo "::set-output name=status::success"
+
+      - name: Upload firmware directory
+        uses: actions/upload-artifact@main
+        if: steps.organize.outputs.status == 'success' && !cancelled()
+        with:
+          name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+          path: ${{ env.FIRMWARE }}
+
+      - name: Generate release tag
+        id: tag
+        if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+        run: |
+          echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+          touch release.txt
+          [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
+          [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
+          echo "::set-output name=status::success"
+
+      - name: Upload firmware to release
+        uses: softprops/action-gh-release@v1
+        if: steps.tag.outputs.status == 'success' && !cancelled()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.release_tag }}
+          body_path: release.txt
+          files: ${{ env.FIRMWARE }}/*
+
+      - name: Delete workflow runs
+        uses: GitRML/delete-workflow-runs@main
+        with:
+          retain_days: 1
+          keep_minimum_runs: 3
+          token: ${{ secrets.GH_TOKEN }}
+          body: |
+
+            ### OpenWrt Image information
+            - Default IP: 192.168.123.1
+            - Default username: root
+            - Default password: none
+            - Default WIFI name: OpenWrt
+            - Default WIFI password: none
+            ### Install to EMMC
+            - Login to OpenWrt → System → Amlogic Service → Install OpenWrt
+            ### OpenWrt Image Verification
+            - sha256sum
+    
