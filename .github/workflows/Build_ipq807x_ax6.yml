@@ -1,8 +1,9 @@
 name: Build_ipq807x_ax6
 
 on:
+  repository_dispatch:
   workflow_dispatch:
-
+  
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
