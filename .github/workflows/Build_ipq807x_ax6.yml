@@ -129,6 +129,11 @@ jobs:
         run: |
           echo "release_tag=$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
           echo "release_name=AE86Wrt-小米IPQ807x-6.12内核-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+          
+      - name: Debug token permissions
+        run: gh auth status
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create release
         uses: softprops/action-gh-release@v2
