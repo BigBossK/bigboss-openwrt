@@ -3,7 +3,6 @@ on:
   repository_dispatch:
   workflow_dispatch:
 
-
 jobs:
   build:
     name: Build ${{ matrix.config.name }}
@@ -11,24 +10,6 @@ jobs:
     strategy:
       matrix:
         config:
-          - name: "X86-5.4"
-            repo_url: "https://github.com/xiangfeidexiaohuo/lede"
-            repo_branch: "k3"
-            kernel_ver: "5.4"
-            config_file: "./configs/X86/x86_504.config"
-            file_name: "x86_504"
-            diy_script: "lean"
-            type: "lede54"
-
-          - name: "X86-Light-6.12"
-            repo_url: "https://github.com/coolsnowwolf/lede"
-            repo_branch: "master"
-            kernel_ver: "6.12"
-            config_file: "./configs/X86/x86_light.config"
-            file_name: "x86_light"
-            diy_script: "lean"
-            type: "light"
-
           - name: "X86-6.12"
             repo_url: "https://github.com/coolsnowwolf/lede"
             repo_branch: "master"
@@ -38,14 +19,6 @@ jobs:
             diy_script: "lean"
             type: "lede"
 
-          - name: "X86-R24.10-6.6"
-            repo_url: "https://github.com/openwrt/openwrt"
-            repo_branch: "openwrt-24.10"
-            kernel_ver: "6.6"
-            config_file: "./configs/X86/x86_r2410.config"
-            file_name: "x86_r2410"
-            diy_script: "op"
-            type: "op"
 
     steps:
     - name: Checkout
@@ -62,13 +35,13 @@ jobs:
       run: |
         sudo timedatectl set-timezone "Asia/Shanghai"
         sudo apt-get update -y
-        sudo apt-get install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pyelftools libpython3-dev qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libfuse-dev python3-setuptools g++ file clang nano genisoimage
+        sudo apt-get install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs libnsl-dev nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pyelftools libpython3-dev qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libfuse-dev python3-setuptools g++ file clang nano genisoimage
         sudo apt-get clean
         git config --global user.name 'GitHub Actions' && git config --global user.email 'noreply@github.com'
 
     - name: Clone source
       run: |
-        git clone https://github.com/xiangfeidexiaohuo/AE86Wrt.git && mv ./AE86Wrt/* ./ && rm -rf ./AE86Wrt
+        git clone https://github.com/BigBossK/openWrt.git && mv ./openWrt/* ./ && rm -rf ./openWrt
         git clone --depth 1 ${{ matrix.config.repo_url }} -b ${{ matrix.config.repo_branch}} openwrt
         cd openwrt
         cp -f ../diy/${{ matrix.config.diy_script }}/${{ matrix.config.diy_script }}1.sh ./
@@ -83,21 +56,8 @@ jobs:
         chmod +x ./${{ matrix.config.diy_script }}2.sh && ./${{ matrix.config.diy_script }}2.sh
         sed -i "s/KERNEL_PATCHVER:=.*/KERNEL_PATCHVER:=${{ matrix.config.kernel_ver }}/g" target/linux/x86/Makefile
         sed -i "s/KERNEL_TESTING_PATCHVER:=.*/KERNEL_TESTING_PATCHVER:=${{ matrix.config.kernel_ver }}/g" target/linux/x86/Makefile
-        
-
-        if [ "${{ matrix.config.type }}" = "lede" ]; then
-           sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='AE86Wrt-X86-Pure-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
-           sed -i "s/OPENWRT_RELEASE=\"*.*\"/OPENWRT_RELEASE=\"AE86Wrt-X86-Pure-$(date +%Y%m%d) By DaoDao\"/g" package/lean/default-settings/files/zzz-default-settings
-        elif [ "${{ matrix.config.type }}" = "op" ]; then
-           sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='AE86Wrt-X86-R24.10-$(date +%Y%m%d)'/g" package/base-files/files/etc/openwrt_release
-           sed -i "s/OPENWRT_RELEASE=\"*.*\"/OPENWRT_RELEASE=\"AE86Wrt-X86-R24.10-$(date +%Y%m%d) By DaoDao\"/g" package/base-files/files/usr/lib/os-release
-        elif [ "${{ matrix.config.type }}" = "lede54" ]; then
-           sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='AE86Wrt-X86-Pure-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
-           sed -i "s/OPENWRT_RELEASE=\"*.*\"/OPENWRT_RELEASE=\"AE86Wrt-X86-Pure-$(date +%Y%m%d) By DaoDao\"/g" package/base-files/files/usr/lib/os-release
-        elif [ "${{ matrix.config.type }}" = "light" ]; then
-           sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='AE86Wrt-X86-Light-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
-           sed -i "s/OPENWRT_RELEASE=\"*.*\"/OPENWRT_RELEASE=\"AE86Wrt-X86-Light-$(date +%Y%m%d) By DaoDao\"/g" package/lean/default-settings/files/zzz-default-settings
-        fi
+        sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='AE86Wrt-X86-Pure-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
+        sed -i "s/OPENWRT_RELEASE=\"*.*\"/OPENWRT_RELEASE=\"AE86Wrt-X86-Pure-$(date +%Y%m%d) By DaoDao\"/g" package/lean/default-settings/files/zzz-default-settings
 
     - name: Configuration Customization
       run: |
@@ -181,7 +141,7 @@ jobs:
         echo "release_name=AE86Wrt-软路由(X86_64)-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
 
     - name: Create release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.release_info.outputs.release_tag }}
         name: ${{ steps.release_info.outputs.release_name }}
