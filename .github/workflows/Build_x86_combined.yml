@@ -59,6 +59,12 @@ jobs:
         sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='LEDE-X86-Pure-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
         sed -i "s/OPENWRT_RELEASE=\"*.*\"/OPENWRT_RELEASE=\"LEDE-X86-Pure-$(date +%Y%m%d) By nixuanliu\"/g" package/lean/default-settings/files/zzz-default-settings
 
+    - name: Override LAN IP (192.168.123.2)
+      working-directory: ./openwrt
+      run: |
+        sed -i 's/192.168.123.1/192.168.123.2/g' package/base-files/files/bin/config_generate
+        sed -i 's/192.168.123.1/192.168.123.2/g' package/base-files/luci2/bin/config_generate
+    
     - name: Configuration Customization
       run: |
         [ -e "${{ matrix.config.config_file }}" ] && mv "${{ matrix.config.config_file }}" openwrt/.config
