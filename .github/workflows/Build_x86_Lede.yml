@@ -1,4 +1,4 @@
-name: Build_x86_combined
+name: Build_x86_lede
 on:
   repository_dispatch:
   workflow_dispatch:
@@ -17,14 +17,6 @@ jobs:
             file_name: "x86_lede"
             diy_script: "lean"
             type: "lede"
-
-          - name: "openwrt"
-            repo_url: "https://github.com/openwrt/openwrt"
-            repo_branch: "openwrt-25.12"
-            config_file: "./configs/X86/x86_r25.config"
-            file_name: "x86_r25"
-            diy_script: "op"
-            type: "op"
 
     steps:
     - name: Checkout
@@ -61,14 +53,8 @@ jobs:
         sed -i "s/192.168.123.1/192.168.123.2/g" ./${{ matrix.config.diy_script }}2.sh
         chmod +x ./${{ matrix.config.diy_script }}2.sh && ./${{ matrix.config.diy_script }}2.sh
 
-        if [ "${{ matrix.config.type }}" = "lede" ]; then
-           sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='LEDE-X86-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
-           sed -i "s/OPENWRT_RELEASE=\"*.*\"/OPENWRT_RELEASE=\"LEDE-X86-$(date +%Y%m%d) By Nixuanliu\"/g" package/lean/default-settings/files/zzz-default-settings
-        elif [ "${{ matrix.config.type }}" = "op" ]; then
-           sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='OpenWrt-X86-R25.12-$(date +%Y%m%d)'/g" package/base-files/files/etc/openwrt_release
-           sed -i "s/OPENWRT_RELEASE=\"*.*\"/OPENWRT_RELEASE=\"OpenWrt-X86-R25.12-$(date +%Y%m%d) By Nixuanliu\"/g" package/base-files/files/usr/lib/os-release
-           rm -rf feeds/2305ipk/op-socat/luci-app-socat/root/etc/config/socat
-        fi
+        sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='LEDE-X86-$(date +%Y%m%d)'/g" package/lean/default-settings/files/zzz-default-settings
+        sed -i "s/OPENWRT_RELEASE=\"*.*\"/OPENWRT_RELEASE=\"LEDE-X86-$(date +%Y%m%d) By Nixuanliu\"/g" package/lean/default-settings/files/zzz-default-settings
 
     - name: Configuration Customization
       run: |

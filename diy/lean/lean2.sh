@@ -19,7 +19,6 @@ echo -e "msgstr \"温度\"" >> feeds/luci/modules/luci-base/po/zh_Hans/base.po
 
               
 ##配置ip等
-sed -i 's|^TARGET_|# TARGET_|g; s|# TARGET_DEVICES += phicomm-k3|TARGET_DEVICES += phicomm-k3| ; s|# TARGET_DEVICES += phicomm_k3|TARGET_DEVICES += phicomm_k3|' target/linux/bcm53xx/image/Makefile
 sed -i 's/192.168.1.1/192.168.123.1/g' package/base-files/files/bin/config_generate
 sed -i 's/192.168.1.1/192.168.123.1/g' package/base-files/luci/bin/config_generate
 
@@ -34,6 +33,15 @@ sed -i '/set luci.main.mediaurlbase=\/luci-static\/bootstrap/d' feeds/luci/theme
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/Makefile
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci-nginx/Makefile
 
+
+##
+sed -i "s/DISTRIB_ID='*.*'/DISTRIB_ID='LEDE_AX6'/g" package/base-files/files/etc/openwrt_release
+date '+%Y%m%d%H' > package/base-files/files/etc/openwrt_version
+sed -i "s/NAME=\"*.*\"/NAME=\"LEDE_AX6\"/g" package/base-files/files/usr/lib/os-release
+
+##更改主机名
+sed -i "s/hostname='.*'/hostname='LEDE_AX6'/g" package/base-files/files/bin/config_generate
+sed -i "s/hostname='.*'/hostname='LEDE_AX6'/g" package/base-files/luci/bin/config_generate
 
 ### fix speed
 sed -i "s/speed = <2500>;/speed = <1000>;/g" target/linux/mediatek/dts/mt7622-*.dts
