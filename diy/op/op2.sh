@@ -28,3 +28,8 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci-n
 
 ## rust
 rm -rf feeds/packages/lang/rust && git clone https://github.com/openwrt/packages.git extra-others && mv extra-others/lang/rust feeds/packages/lang/ && rm -rf extra-others
+
+## 修复 lua-neturl Makefile，添加 PKG_REAL_VERSION 兼容 APK
+sed -i 's|PKG_VERSION:=\(.*\)|PKG_REAL_VERSION:=\1\nPKG_VERSION:=$(subst -,.,$(PKG_REAL_VERSION))|' feeds/small/lua-neturl/Makefile
+sed -i 's|PKG_SOURCE:=\$(PKG_NAME)-\$(PKG_VERSION).tar.gz|PKG_SOURCE:=$(PKG_NAME)-$(PKG_REAL_VERSION).tar.gz|' feeds/small/lua-neturl/Makefile
+sed -i 's|v\$(PKG_VERSION)?|v$(PKG_REAL_VERSION)?|' feeds/small/lua-neturl/Makefile
