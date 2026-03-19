@@ -29,19 +29,23 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci-n
 ## rust
 rm -rf feeds/packages/lang/rust && git clone https://github.com/openwrt/packages.git extra-others && mv extra-others/lang/rust feeds/packages/lang/ && rm -rf extra-others
 
-## 批量修复 kenzo 和 small 源中含连字符的版本号，兼容 APK
+## 批量修复 kenzo 和 small 源中版本号含 -rN 后缀的包（如 0.12.6-r1）
+for f in $(grep -rl "^PKG_VERSION:=.*-r[0-9]" feeds/kenzo/ feeds/small/); do
+    PKG_VER=$(grep "^PKG_VERSION:=" "$f" | head -1 | cut -d= -f2)
+    VER_MAIN=$(echo "$PKG_VER" | sed 's/-r[0-9]*//')
+    VER_REL=$(echo "$PKG_VER" | grep -o 'r[0-9]*' | tr -d 'r')
+    echo "Fixing -rN version: $f (version: $PKG_VER)"
+    sed -i "s|^PKG_VERSION:=${PKG_VER}|PKG_VERSION:=${VER_MAIN}\nPKG_RELEASE:=${VER_REL}|" "$f"
+done
+
+## 批量修复 kenzo 和 small 源中版本号含日期或其他连字符的包（如 5.8.0-20240106、1.2-1）
 for f in $(grep -rl "^PKG_VERSION:=.*-" feeds/kenzo/ feeds/small/); do
-    # 提取当前版本号，确认含有连字符才处理
     PKG_VER=$(grep "^PKG_VERSION:=" "$f" | head -1 | cut -d= -f2)
     if echo "$PKG_VER" | grep -q "-"; then
-        echo "Fixing: $f (version: $PKG_VER)"
-        # 1. 把 PKG_VERSION:=x.x-x 替换为 PKG_REAL_VERSION + PKG_VERSION
+        echo "Fixing version: $f (version: $PKG_VER)"
         sed -i "s|^PKG_VERSION:=${PKG_VER}|PKG_REAL_VERSION:=${PKG_VER}\nPKG_VERSION:=\$(subst -,.,\$(PKG_REAL_VERSION))|" "$f"
-        # 2. PKG_SOURCE、PKG_SOURCE_URL、PKG_BUILD_DIR 里的 $(PKG_VERSION) 换成 $(PKG_REAL_VERSION)
         sed -i 's|\$(PKG_VERSION)|\$(PKG_REAL_VERSION)|g' "$f"
-        # 3. 把刚写入的 PKG_VERSION 那行恢复（避免 subst 行也被替换）
         sed -i 's|PKG_REAL_VERSION:=\$(subst -,.,\$(PKG_REAL_VERSION))|PKG_VERSION:=\$(subst -,.,\$(PKG_REAL_VERSION))|' "$f"
-        # 4. 如果没有 PKG_BUILD_DIR 则补上
         if ! grep -q "^PKG_BUILD_DIR" "$f"; then
             sed -i '/^PKG_HASH/a PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_REAL_VERSION)' "$f"
         fi
