@@ -29,10 +29,6 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci-n
 ## rust
 rm -rf feeds/packages/lang/rust && git clone https://github.com/openwrt/packages.git extra-others && mv extra-others/lang/rust feeds/packages/lang/ && rm -rf extra-others
 
-## 删除 kenzo 中依赖 rust-bindgen 的 smartdns，使用官方版本
-rm -rf feeds/kenzo/smartdns
-rm -rf feeds/kenzo/luci-app-smartdns
-
 ## 批量修复 kenzo 和 small 源中版本号含 -rN 后缀的包（如 0.12.6-r1）
 for f in $(grep -rl "^PKG_VERSION:=.*-r[0-9]" feeds/kenzo/ feeds/small/); do
     PKG_VER=$(grep "^PKG_VERSION:=" "$f" | head -1 | cut -d= -f2)
