@@ -51,7 +51,6 @@ jobs:
         ./scripts/feeds update -a
         ./scripts/feeds install -a
         cp -f ../diy/${{ matrix.config.diy_script }}/${{ matrix.config.diy_script }}2.sh ./
-        sed -i "s/192.168.123.1/192.168.123.2/g" ./${{ matrix.config.diy_script }}2.sh
         chmod +x ./${{ matrix.config.diy_script }}2.sh && ./${{ matrix.config.diy_script }}2.sh
 
         sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='OpenWrt-X86-R25.12-$(date +%Y%m%d)'/g" package/base-files/files/etc/openwrt_release
