@@ -16,8 +16,6 @@ echo -e "msgstr \"魔法网络\"" >> feeds/luci/modules/luci-base/po/zh_Hans/bas
 ##配置IP
 sed -i 's/192.168.1.1/192.168.123.2/g' package/base-files/files/bin/config_generate
 
-# 设置默认主题为 argon
-sed -i 's|/luci-static/bootstrap|/luci-static/argon|g' feeds/luci/themes/luci-theme-bootstrap/root/etc/uci-defaults/30_luci-theme-bootstrap
 
 # 将 LuCI 默认依赖主题从 bootstrap 改为 argon
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/Makefile
@@ -34,8 +32,8 @@ grep -q '^net.core.rmem_max=' package/base-files/files/etc/sysctl.conf 2>/dev/nu
 ## rust
 rm -rf feeds/packages/lang/rust && git clone https://github.com/openwrt/packages.git extra-others && mv extra-others/lang/rust feeds/packages/lang/ && rm -rf extra-others
 
-## 批量修复 kenzo 和 small 源中版本号含 -rN 后缀的包（如 0.12.6-r1）
-for f in $(grep -rl "^PKG_VERSION:=.*-r[0-9]" feeds/kenzo/ feeds/small/); do
+## 批量修复 kenzo 源中版本号含 -rN 后缀的包（如 0.12.6-r1）
+for f in $(grep -rl "^PKG_VERSION:=.*-r[0-9]" feeds/kenzo/); do
     PKG_VER=$(grep "^PKG_VERSION:=" "$f" | head -1 | cut -d= -f2)
     VER_MAIN=$(echo "$PKG_VER" | sed 's/-r[0-9]*//')
     VER_REL=$(echo "$PKG_VER" | grep -o 'r[0-9]*' | tr -d 'r')
@@ -43,8 +41,8 @@ for f in $(grep -rl "^PKG_VERSION:=.*-r[0-9]" feeds/kenzo/ feeds/small/); do
     sed -i "s|^PKG_VERSION:=${PKG_VER}|PKG_VERSION:=${VER_MAIN}\nPKG_RELEASE:=${VER_REL}|" "$f"
 done
 
-## 批量修复 kenzo 和 small 源中版本号含日期或其他连字符的包（如 5.8.0-20240106、1.2-1）
-for f in $(grep -rl "^PKG_VERSION:=.*-" feeds/kenzo/ feeds/small/); do
+## 批量修复 kenzo 源中版本号含日期或其他连字符的包（如 5.8.0-20240106、1.2-1）
+for f in $(grep -rl "^PKG_VERSION:=.*-" feeds/kenzo/); do
     PKG_VER=$(grep "^PKG_VERSION:=" "$f" | head -1 | cut -d= -f2)
     if echo "$PKG_VER" | grep -q "-"; then
         echo "Fixing version: $f (version: $PKG_VER)"
@@ -56,3 +54,7 @@ for f in $(grep -rl "^PKG_VERSION:=.*-" feeds/kenzo/ feeds/small/); do
         fi
     fi
 done
+
+# 克隆到 package 目录
+rm -rf package/luci-app-adguardhome
+git clone https://github.com/kenzok78/luci-app-adguardhome.git package/luci-app-adguardhome
