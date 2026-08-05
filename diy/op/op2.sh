@@ -16,21 +16,20 @@ echo -e "msgstr \"魔法网络\"" >> feeds/luci/modules/luci-base/po/zh_Hans/bas
 ##配置IP
 sed -i 's/192.168.1.1/192.168.123.2/g' package/base-files/files/bin/config_generate
 
+# 设置 Argon 为首次启动时的默认主题
+mkdir -p files/etc/uci-defaults
 
-# 将 LuCI 默认依赖主题从 bootstrap 改为 argon
-sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/Makefile
-sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci-nginx/Makefile
+cat > files/etc/uci-defaults/99-set-argon <<'EOF'
+#!/bin/sh
+uci -q set luci.main.mediaurlbase='/luci-static/argon'
+uci -q commit luci
+exit 0
+EOF
+
+chmod +x files/etc/uci-defaults/99-set-argon
 
 ##更改主机名
 sed -i "s/hostname='.*'/hostname='X86Wrt'/g" package/base-files/files/bin/config_generate
-
-## 修复 nlbwmon netlink 接收缓冲区过小问题
-grep -q '^net.core.rmem_max=' package/base-files/files/etc/sysctl.conf 2>/dev/null \
-  && sed -i 's/^net.core.rmem_max=.*/net.core.rmem_max=524288/' package/base-files/files/etc/sysctl.conf \
-  || echo 'net.core.rmem_max=524288' >> package/base-files/files/etc/sysctl.conf
-
-## rust
-rm -rf feeds/packages/lang/rust && git clone https://github.com/openwrt/packages.git extra-others && mv extra-others/lang/rust feeds/packages/lang/ && rm -rf extra-others
 
 ## 批量修复 kenzo 源中版本号含 -rN 后缀的包（如 0.12.6-r1）
 for f in $(grep -rl "^PKG_VERSION:=.*-r[0-9]" feeds/kenzo/); do
@@ -54,7 +53,3 @@ for f in $(grep -rl "^PKG_VERSION:=.*-" feeds/kenzo/); do
         fi
     fi
 done
-
-# 克隆到 package 目录
-rm -rf package/luci-app-adguardhome
-git clone https://github.com/kenzok78/luci-app-adguardhome.git package/luci-app-adguardhome
