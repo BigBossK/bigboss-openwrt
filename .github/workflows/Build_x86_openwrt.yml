@@ -24,15 +24,9 @@ jobs:
       uses: actions/checkout@main
 
     - name: Free disk space
-      uses: insightsengineering/disk-space-reclaimer@v1
+      uses: sbwml/actions@free-disk
       with:
-        android: true
-        dotnet: true
-        haskell: true
-        large-packages: true
-        docker-images: true
-        swap-storage: true
-        tools-cache: false
+        build-mount-path: ${{ github.workspace }}
 
     - name: Initialization environment
       env:
